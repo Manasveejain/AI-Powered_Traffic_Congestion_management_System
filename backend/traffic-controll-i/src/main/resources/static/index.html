@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Smart Traffic Congestion Predictor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',sans-serif;background:#0a0e1a;color:#e0e6f0;min-height:100vh;}
+header{background:linear-gradient(135deg,#0d1b2a,#1a2a4a);padding:18px 32px;display:flex;align-items:center;gap:16px;border-bottom:2px solid #00d4ff33;}
+header h1{font-size:1.5rem;color:#00d4ff;letter-spacing:1px;}
+header span{font-size:.85rem;color:#7a9cc0;margin-left:auto;}
+.badge{background:#00d4ff22;color:#00d4ff;border:1px solid #00d4ff55;border-radius:20px;padding:3px 12px;font-size:.75rem;}
+nav{display:flex;gap:4px;padding:12px 32px;background:#0d1420;border-bottom:1px solid #1e2d45;flex-wrap:wrap;}
+nav button{background:transparent;border:1px solid #1e3a5a;color:#7a9cc0;padding:7px 18px;border-radius:6px;cursor:pointer;font-size:.85rem;transition:all .2s;}
+nav button:hover,nav button.active{background:#00d4ff22;border-color:#00d4ff;color:#00d4ff;}
+.container{padding:24px 32px;max-width:1400px;margin:0 auto;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+.card{background:#0d1b2e;border:1px solid #1e3a5a;border-radius:12px;padding:20px;}
+.card h3{color:#00d4ff;font-size:.95rem;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.stat-card{background:linear-gradient(135deg,#0d1b2e,#0a1525);border:1px solid #1e3a5a;border-radius:12px;padding:18px;text-align:center;}
+.stat-card .val{font-size:2rem;font-weight:700;color:#00d4ff;}
+.stat-card .lbl{font-size:.78rem;color:#7a9cc0;margin-top:4px;}
+label{display:block;font-size:.82rem;color:#7a9cc0;margin-bottom:5px;}
+input,select{width:100%;background:#0a1525;border:1px solid #1e3a5a;color:#e0e6f0;padding:9px 12px;border-radius:7px;font-size:.88rem;margin-bottom:12px;}
+input:focus,select:focus{outline:none;border-color:#00d4ff;}
+button.btn{background:linear-gradient(135deg,#0066cc,#00aaff);color:#fff;border:none;padding:10px 24px;border-radius:7px;cursor:pointer;font-size:.9rem;font-weight:600;width:100%;transition:opacity .2s;}
+button.btn:hover{opacity:.85;}
+button.btn.danger{background:linear-gradient(135deg,#cc2200,#ff4422);}
+button.btn.green{background:linear-gradient(135deg,#006622,#00aa44);}
+.result{background:#060e1a;border:1px solid #1e3a5a;border-radius:8px;padding:14px;margin-top:14px;font-size:.85rem;line-height:1.7;white-space:pre-wrap;max-height:340px;overflow-y:auto;}
+.tag{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.78rem;font-weight:600;}
+.tag.LOW{background:#00441122;color:#00cc44;border:1px solid #00cc4455;}
+.tag.MEDIUM{background:#44440022;color:#ffcc00;border:1px solid #ffcc0055;}
+.tag.HIGH{background:#44220022;color:#ff8800;border:1px solid #ff880055;}
+.tag.SEVERE{background:#44000022;color:#ff3333;border:1px solid #ff333355;}
+.progress-bar{background:#0a1525;border-radius:20px;height:10px;overflow:hidden;margin:6px 0;}
+.progress-fill{height:100%;border-radius:20px;transition:width .5s;}
+.alert-item{background:#0a1525;border-left:3px solid #ff8800;border-radius:6px;padding:10px 14px;margin-bottom:8px;}
+.alert-item.SEVERE{border-color:#ff3333;}
+.alert-item.HIGH{border-color:#ff8800;}
+.alert-item.MEDIUM{border-color:#ffcc00;}
+.chat-box{height:280px;overflow-y:auto;background:#060e1a;border:1px solid #1e3a5a;border-radius:8px;padding:12px;margin-bottom:10px;}
+.chat-msg{margin-bottom:10px;}
+.chat-msg.user .bubble{background:#0066cc33;border-radius:8px 8px 2px 8px;padding:8px 12px;display:inline-block;max-width:80%;font-size:.85rem;}
+.chat-msg.bot .bubble{background:#1e3a5a55;border-radius:8px 8px 8px 2px;padding:8px 12px;display:inline-block;max-width:80%;font-size:.85rem;}
+.chat-msg.user{text-align:right;}
+.chat-input-row{display:flex;gap:8px;}
+.chat-input-row input{margin:0;flex:1;}
+.chat-input-row button{width:auto;padding:9px 18px;}
+.heatmap-grid{display:grid;gap:4px;margin-top:10px;}
+.heatmap-cell{border-radius:4px;padding:6px;text-align:center;font-size:.7rem;cursor:pointer;transition:transform .15s;}
+.heatmap-cell:hover{transform:scale(1.1);}
+.heatmap-cell.LOW{background:#00441155;}
+.heatmap-cell.MEDIUM{background:#44440055;}
+.heatmap-cell.HIGH{background:#44220055;}
+.heatmap-cell.SEVERE{background:#44000055;}
+.route-card{background:#0a1525;border:1px solid #1e3a5a;border-radius:8px;padding:12px;margin-bottom:8px;}
+.route-card.recommended{border-color:#00cc44;}
+.section{display:none;}
+.section.active{display:block;}
+#toast{position:fixed;bottom:24px;right:24px;background:#0d1b2e;border:1px solid #00d4ff;color:#00d4ff;padding:12px 20px;border-radius:8px;font-size:.85rem;opacity:0;transition:opacity .3s;z-index:999;}
+#toast.show{opacity:1;}
+@media(max-width:768px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}.container{padding:16px;}}
+</style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:1.6rem">🚦</span>
+  <h1>AI Smart Traffic Congestion Predictor</h1>
+  <span class="badge">LIVE</span>
+  <span id="clock" style="margin-left:auto;color:#7a9cc0;font-size:.82rem;"></span>
+</header>
+
+<nav>
+  <button class="active" onclick="showSection('dashboard')">📊 Dashboard</button>
+  <button onclick="showSection('predict')">🔮 Predict</button>
+  <button onclick="showSection('heatmap')">🗺️ Heatmap</button>
+  <button onclick="showSection('reroute')">🔀 Reroute</button>
+  <button onclick="showSection('signals')">🚦 Signals</button>
+  <button onclick="showSection('emergency')">🚨 Emergency</button>
+  <button onclick="showSection('alerts')">⚠️ Alerts</button>
+  <button onclick="showSection('chatbot')">🤖 Chatbot</button>
+</nav>
+
+<div class="container">
+  <div id="toast"></div>
+
+  <!-- ── DASHBOARD ── -->
+  <div id="dashboard" class="section active">
+    <div class="grid-4" style="margin-bottom:20px;" id="statsGrid">
+      <div class="stat-card"><div class="val" id="s-vehicles">—</div><div class="lbl">Vehicles Monitored</div></div>
+      <div class="stat-card"><div class="val" id="s-alerts">—</div><div class="lbl">Active Alerts</div></div>
+      <div class="stat-card"><div class="val" id="s-speed">—</div><div class="lbl">Avg City Speed (km/h)</div></div>
+      <div class="stat-card"><div class="val" id="s-index">—</div><div class="lbl">Congestion Index</div></div>
+    </div>
+    <div class="grid-3" style="margin-bottom:20px;">
+      <div class="stat-card"><div class="val" id="s-signals">—</div><div class="lbl">Signals Optimized</div></div>
+      <div class="stat-card"><div class="val" id="s-emergency">—</div><div class="lbl">Emergency Routes Active</div></div>
+      <div class="stat-card"><div class="val" id="s-co2">—%</div><div class="lbl">CO₂ Reduction</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>📈 Congestion Index</h3>
+        <div style="font-size:3rem;font-weight:700;color:#00d4ff;text-align:center;padding:10px 0;" id="d-congestion-big">—</div>
+        <div class="progress-bar"><div class="progress-fill" id="d-congestion-bar" style="width:0%;background:linear-gradient(90deg,#00cc44,#ffcc00,#ff3333);"></div></div>
+        <div style="text-align:center;margin-top:8px;font-size:.82rem;color:#7a9cc0;" id="d-peak">Predicted Peak: —</div>
+      </div>
+      <div class="card">
+        <h3>🤖 Model Status</h3>
+        <div id="d-model-status" style="padding:10px 0;font-size:.9rem;line-height:2;"></div>
+        <button class="btn" onclick="loadStats()">🔄 Refresh Stats</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PREDICT ── -->
+  <div id="predict" class="section">
+    <div class="grid-2">
+      <div class="card">
+        <h3>🔮 Congestion Prediction</h3>
+        <label>Vehicle Count</label>
+        <input type="number" id="p-vehicles" value="75" min="0" max="200"/>
+        <label>Average Speed (km/h)</label>
+        <input type="number" id="p-speed" value="35" min="0" max="120"/>
+        <label>Weather Condition</label>
+        <select id="p-weather">
+          <option value="0">0 — Clear</option>
+          <option value="1">1 — Cloudy</option>
+          <option value="2">2 — Rain</option>
+          <option value="3">3 — Fog</option>
+          <option value="4">4 — Snow</option>
+          <option value="5">5 — Storm</option>
+        </select>
+        <label>Location (optional)</label>
+        <input type="text" id="p-location" placeholder="e.g. Highway 1, Junction 4"/>
+        <button class="btn" onclick="doPrediction()">🔮 Predict Congestion</button>
+      </div>
+      <div class="card">
+        <h3>📊 Prediction Result</h3>
+        <div id="predict-result" class="result">Fill in the form and click Predict.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── HEATMAP ── -->
+  <div id="heatmap" class="section">
+    <div class="grid-2">
+      <div class="card">
+        <h3>🗺️ Heatmap Settings</h3>
+        <label>City Name</label>
+        <input type="text" id="h-city" value="SmartCity"/>
+        <label>Grid Size (NxN)</label>
+        <select id="h-grid">
+          <option value="4">4×4</option>
+          <option value="5" selected>5×5</option>
+          <option value="6">6×6</option>
+        </select>
+        <label>Base Latitude</label>
+        <input type="number" id="h-lat" value="19.0760" step="0.001"/>
+        <label>Base Longitude</label>
+        <input type="number" id="h-lng" value="72.8777" step="0.001"/>
+        <button class="btn" onclick="doHeatmap()">🗺️ Generate Heatmap</button>
+      </div>
+      <div class="card">
+        <h3>🔥 Congestion Heatmap</h3>
+        <div id="heatmap-summary" style="margin-bottom:10px;font-size:.85rem;color:#7a9cc0;"></div>
+        <div id="heatmap-grid"></div>
+        <div style="display:flex;gap:12px;margin-top:12px;font-size:.75rem;">
+          <span><span style="color:#00cc44">■</span> LOW</span>
+          <span><span style="color:#ffcc00">■</span> MEDIUM</span>
+          <span><span style="color:#ff8800">■</span> HIGH</span>
+          <span><span style="color:#ff3333">■</span> SEVERE</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── REROUTE ── -->
+  <div id="reroute" class="section">
+    <div class="grid-2">
+      <div class="card">
+        <h3>🔀 Smart Rerouting</h3>
+        <label>Origin</label>
+        <input type="text" id="r-origin" placeholder="e.g. Central Station"/>
+        <label>Destination</label>
+        <input type="text" id="r-dest" placeholder="e.g. Airport Terminal 2"/>
+        <label>Current Congestion Level</label>
+        <select id="r-congestion">
+          <option value="LOW">LOW</option>
+          <option value="MEDIUM">MEDIUM</option>
+          <option value="HIGH" selected>HIGH</option>
+          <option value="SEVERE">SEVERE</option>
+        </select>
+        <button class="btn" onclick="doReroute()">🔀 Get Alternate Routes</button>
+      </div>
+      <div class="card">
+        <h3>🛣️ Route Suggestions</h3>
+        <div id="reroute-result"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SIGNALS ── -->
+  <div id="signals" class="section">
+    <div class="grid-2">
+      <div class="card">
+        <h3>🚦 Signal Timing Optimisation</h3>
+        <label>Intersection ID</label>
+        <input type="text" id="sig-id" value="INT-01"/>
+        <label>Vehicle Count</label>
+        <input type="number" id="sig-vehicles" value="90" min="0"/>
+        <label>Average Speed (km/h)</label>
+        <input type="number" id="sig-speed" value="25" min="0"/>
+        <label>Weather</label>
+        <select id="sig-weather">
+          <option value="0">0 — Clear</option>
+          <option value="1">1 — Cloudy</option>
+          <option value="2">2 — Rain</option>
+          <option value="3">3 — Fog</option>
+        </select>
+        <button class="btn" onclick="doSignal()">⚡ Optimise Signal</button>
+      </div>
+      <div class="card">
+        <h3>⏱️ Signal Timing Result</h3>
+        <div id="signal-result" class="result">Fill in the form and click Optimise.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EMERGENCY ── -->
+  <div id="emergency" class="section">
+    <div class="grid-2">
+      <div class="card">
+        <h3>🚨 Emergency Vehicle Priority</h3>
+        <label>Vehicle Type</label>
+        <select id="em-type">
+          <option value="AMBULANCE">🚑 Ambulance</option>
+          <option value="FIRE_TRUCK">🚒 Fire Truck</option>
+          <option value="POLICE">🚓 Police</option>
+          <option value="RESCUE">🚁 Rescue</option>
+        </select>
+        <label>Origin</label>
+        <input type="text" id="em-origin" placeholder="e.g. City Hospital"/>
+        <label>Destination</label>
+        <input type="text" id="em-dest" placeholder="e.g. Accident Site, Highway 3"/>
+        <button class="btn danger" onclick="doEmergency()">🚨 Activate Priority Route</button>
+      </div>
+      <div class="card">
+        <h3>🛣️ Emergency Route</h3>
+        <div id="emergency-result" class="result">Select vehicle type and click Activate.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ALERTS ── -->
+  <div id="alerts" class="section">
+    <div class="card" style="margin-bottom:16px;">
+      <h3>⚠️ Real-time Traffic Alerts</h3>
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+        <div style="flex:1;min-width:160px;">
+          <label>City</label>
+          <input type="text" id="al-city" value="SmartCity" style="margin:0;"/>
+        </div>
+        <div style="flex:1;min-width:160px;">
+          <label>Filter by Severity</label>
+          <select id="al-severity" style="margin:0;">
+            <option value="">All</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="HIGH">HIGH</option>
+            <option value="SEVERE">SEVERE</option>
+          </select>
+        </div>
+        <button class="btn" style="width:auto;padding:9px 20px;" onclick="doAlerts()">🔄 Load Alerts</button>
+      </div>
+    </div>
+    <div id="alerts-result"></div>
+  </div>
+
+  <!-- ── CHATBOT ── -->
+  <div id="chatbot" class="section">
+    <div class="card" style="max-width:700px;margin:0 auto;">
+      <h3>🤖 AI Traffic Assistant</h3>
+      <div class="chat-box" id="chat-box">
+        <div class="chat-msg bot"><div class="bubble">👋 Hello! I'm your AI Traffic Assistant. Ask me about congestion, routes, alerts, signals, or parking.</div></div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Ask about traffic..." onkeydown="if(event.key==='Enter')sendChat()"/>
+        <button class="btn" style="width:auto;" onclick="sendChat()">Send</button>
+      </div>
+      <div style="margin-top:10px;font-size:.78rem;color:#7a9cc0;">
+        Try: "What is the traffic on Highway 1?" · "Suggest alternate route" · "Any accidents?" · "Signal timing"
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = '/api/traffic';
+
+// ── Clock ──────────────────────────────────────────────────────────────────
+function updateClock(){
+  document.getElementById('clock').textContent = new Date().toLocaleString();
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+function showSection(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+  if(id==='dashboard') loadStats();
+  if(id==='alerts') doAlerts();
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function levelColor(l){
+  return {LOW:'#00cc44',MEDIUM:'#ffcc00',HIGH:'#ff8800',SEVERE:'#ff3333'}[l]||'#7a9cc0';
+}
+function levelEmoji(l){
+  return {LOW:'🟢',MEDIUM:'🟡',HIGH:'🟠',SEVERE:'🔴'}[l]||'⚪';
+}
+async function apiFetch(path, method='GET', body=null){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body) opts.body=JSON.stringify(body);
+  const r=await fetch(API+path,opts);
+  return r.json();
+}
+
+// ── Dashboard Stats ────────────────────────────────────────────────────────
+async function loadStats(){
+  try{
+    const d=await apiFetch('/stats');
+    document.getElementById('s-vehicles').textContent=(d.totalVehiclesMonitored||'—').toLocaleString();
+    document.getElementById('s-alerts').textContent=d.activeAlerts||'—';
+    document.getElementById('s-speed').textContent=d.avgCitySpeed||'—';
+    document.getElementById('s-index').textContent=d.congestionIndex||'—';
+    document.getElementById('s-signals').textContent=d.signalsOptimized||'—';
+    document.getElementById('s-emergency').textContent=d.emergencyRoutesActive||'—';
+    document.getElementById('s-co2').textContent=(d.co2ReductionPercent||'—')+'%';
+    document.getElementById('d-congestion-big').textContent=(d.congestionIndex||0)+'%';
+    document.getElementById('d-congestion-bar').style.width=(d.congestionIndex||0)+'%';
+    document.getElementById('d-peak').textContent='Predicted Peak: '+(d.predictedPeakHour||'—');
+    document.getElementById('d-model-status').innerHTML=
+      `<div>Model: <strong style="color:#00d4ff">${d.modelStatus||'—'}</strong></div>
+       <div>Signals Optimized: <strong>${d.signalsOptimized||0}</strong></div>
+       <div>Emergency Routes: <strong>${d.emergencyRoutesActive||0}</strong></div>
+       <div>CO₂ Saved: <strong style="color:#00cc44">${d.co2ReductionPercent||0}%</strong></div>`;
+  }catch(e){toast('Could not load stats — is the server running?');}
+}
+
+// ── Prediction ─────────────────────────────────────────────────────────────
+async function doPrediction(){
+  const body={
+    vehicleCount:+document.getElementById('p-vehicles').value,
+    avgSpeed:+document.getElementById('p-speed').value,
+    weather:+document.getElementById('p-weather').value,
+    location:document.getElementById('p-location').value||'Unknown'
+  };
+  const el=document.getElementById('predict-result');
+  el.textContent='Predicting…';
+  try{
+    const d=await apiFetch('/predict','POST',body);
+    const color=levelColor(d.traffic);
+    el.innerHTML=`
+<div style="font-size:1.8rem;font-weight:700;color:${color};margin-bottom:8px;">
+  ${levelEmoji(d.traffic)} ${d.traffic} CONGESTION
+</div>
+<div style="margin-bottom:6px;">Congestion Score: <strong style="color:${color}">${d.congestionScore}/100</strong></div>
+<div style="margin-bottom:6px;">ETA Delay: <strong>+${d.etaDelayMinutes} min</strong></div>
+<div style="margin-bottom:6px;">Weather: <strong>${d.weatherCondition}</strong></div>
+<div style="margin-bottom:6px;">Location: <strong>${d.location}</strong></div>
+<div style="margin-bottom:6px;">Model: <strong>${d.modelUsed}</strong></div>
+<div style="margin-top:10px;color:#7a9cc0;font-size:.82rem;">Probabilities:</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0;">
+  ${['LOW','MEDIUM','HIGH','SEVERE'].map((l,i)=>`
+    <div style="background:#0a1525;border:1px solid #1e3a5a;border-radius:6px;padding:6px 10px;text-align:center;min-width:70px;">
+      <div style="color:${levelColor(l)};font-weight:700;">${l}</div>
+      <div style="font-size:.85rem;">${d.prediction?((d.prediction[i]||0)*100).toFixed(1)+'%':'—'}</div>
+    </div>`).join('')}
+</div>
+<div style="margin-top:10px;color:#7a9cc0;font-size:.82rem;">Preventive Actions:</div>
+<ul style="margin:6px 0 0 16px;">
+  ${(d.preventiveActions||[]).map(a=>`<li style="margin-bottom:3px;">${a}</li>`).join('')}
+</ul>`;
+  }catch(e){el.textContent='Error: '+e.message;}
+}
+
+// ── Heatmap ────────────────────────────────────────────────────────────────
+async function doHeatmap(){
+  const body={
+    city:document.getElementById('h-city').value,
+    gridSize:+document.getElementById('h-grid').value,
+    baseLat:+document.getElementById('h-lat').value,
+    baseLng:+document.getElementById('h-lng').value
+  };
+  const gridEl=document.getElementById('heatmap-grid');
+  const sumEl=document.getElementById('heatmap-summary');
+  gridEl.innerHTML='Loading…';
+  try{
+    const d=await apiFetch('/heatmap','POST',body);
+    const n=body.gridSize;
+    sumEl.innerHTML=`City: <strong>${d.city}</strong> | Zones: <strong>${d.totalZones}</strong> | High Risk: <strong style="color:#ff3333">${d.highRiskZones}</strong>`;
+    gridEl.style.gridTemplateColumns=`repeat(${n},1fr)`;
+    gridEl.className='heatmap-grid';
+    gridEl.innerHTML=(d.zones||[]).map(z=>`
+      <div class="heatmap-cell ${z.congestionLevel}" title="${z.zoneId}: ${z.congestionLevel} (${z.congestionScore})\nVehicles: ${z.vehicleCount} | Speed: ${z.avgSpeed}km/h"
+           style="border:1px solid ${levelColor(z.congestionLevel)}33;">
+        <div style="color:${levelColor(z.congestionLevel)};font-weight:700;">${z.congestionScore}</div>
+        <div style="color:#7a9cc0;">${z.zoneId}</div>
+      </div>`).join('');
+  }catch(e){gridEl.textContent='Error: '+e.message;}
+}
+
+// ── Reroute ────────────────────────────────────────────────────────────────
+async function doReroute(){
+  const body={
+    origin:document.getElementById('r-origin').value||'Origin',
+    destination:document.getElementById('r-dest').value||'Destination',
+    currentCongestion:document.getElementById('r-congestion').value
+  };
+  const el=document.getElementById('reroute-result');
+  el.innerHTML='Loading routes…';
+  try{
+    const d=await apiFetch('/reroute','POST',body);
+    el.innerHTML=`
+<div style="font-size:.82rem;color:#7a9cc0;margin-bottom:10px;">
+  ${d.origin} → ${d.destination} | Current: <span style="color:${levelColor(d.currentStatus)}">${d.currentStatus}</span>
+  ${d.carpoolSuggestion?'<span style="color:#ffcc00;margin-left:8px;">🚗 Carpool suggested</span>':''}
+  ${d.parkingDiversion?'<span style="color:#ff8800;margin-left:8px;">🅿️ Parking diversion active</span>':''}
+</div>
+${(d.alternateRoutes||[]).map(r=>`
+<div class="route-card ${r.recommended?'recommended':''}">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <strong style="color:${r.recommended?'#00cc44':'#e0e6f0'}">${r.recommended?'⭐ ':''}${r.name}</strong>
+    <span class="tag ${r.congestionLevel}">${r.congestionLevel}</span>
+  </div>
+  <div style="font-size:.82rem;color:#7a9cc0;margin-top:6px;">
+    📏 ${r.distanceKm} km &nbsp;|&nbsp; ⏱️ ~${r.estimatedMinutes} min
+  </div>
+  <div style="font-size:.78rem;color:#5a7a9a;margin-top:4px;">via ${r.via.join(' → ')}</div>
+</div>`).join('')}`;
+  }catch(e){el.innerHTML='Error: '+e.message;}
+}
+
+// ── Signal Timing ──────────────────────────────────────────────────────────
+async function doSignal(){
+  const body={
+    intersectionId:document.getElementById('sig-id').value,
+    vehicleCount:+document.getElementById('sig-vehicles').value,
+    avgSpeed:+document.getElementById('sig-speed').value,
+    weather:+document.getElementById('sig-weather').value
+  };
+  const el=document.getElementById('signal-result');
+  el.textContent='Optimising…';
+  try{
+    const d=await apiFetch('/signal-timing','POST',body);
+    const t=d.signalTiming||{};
+    const color=levelColor(d.congestionLevel);
+    el.innerHTML=`
+<div style="margin-bottom:8px;">Intersection: <strong>${d.intersectionId}</strong></div>
+<div style="margin-bottom:8px;">Congestion: <strong style="color:${color}">${d.congestionLevel}</strong></div>
+<div style="margin-bottom:12px;font-size:.85rem;color:#7a9cc0;">${d.recommendation}</div>
+<div style="display:flex;gap:10px;justify-content:center;margin:10px 0;">
+  <div style="text-align:center;background:#00441133;border:2px solid #00cc44;border-radius:50%;width:80px;height:80px;display:flex;flex-direction:column;justify-content:center;">
+    <div style="color:#00cc44;font-size:1.3rem;font-weight:700;">${t.greenSeconds}s</div>
+    <div style="font-size:.7rem;color:#7a9cc0;">GREEN</div>
+  </div>
+  <div style="text-align:center;background:#44440033;border:2px solid #ffcc00;border-radius:50%;width:80px;height:80px;display:flex;flex-direction:column;justify-content:center;">
+    <div style="color:#ffcc00;font-size:1.3rem;font-weight:700;">${t.yellowSeconds}s</div>
+    <div style="font-size:.7rem;color:#7a9cc0;">YELLOW</div>
+  </div>
+  <div style="text-align:center;background:#44000033;border:2px solid #ff3333;border-radius:50%;width:80px;height:80px;display:flex;flex-direction:column;justify-content:center;">
+    <div style="color:#ff3333;font-size:1.3rem;font-weight:700;">${t.redSeconds}s</div>
+    <div style="font-size:.7rem;color:#7a9cc0;">RED</div>
+  </div>
+</div>
+<div style="text-align:center;font-size:.82rem;color:#7a9cc0;">Cycle: ${t.cycleSeconds}s | Adaptive Mode: ${d.adaptiveMode?'ON':'OFF'}</div>`;
+  }catch(e){el.textContent='Error: '+e.message;}
+}
+
+// ── Emergency Route ────────────────────────────────────────────────────────
+async function doEmergency(){
+  const body={
+    vehicleType:document.getElementById('em-type').value,
+    origin:document.getElementById('em-origin').value||'Base Station',
+    destination:document.getElementById('em-dest').value||'Incident Site'
+  };
+  const el=document.getElementById('emergency-result');
+  el.textContent='Activating priority corridor…';
+  try{
+    const d=await apiFetch('/emergency-route','POST',body);
+    el.innerHTML=`
+<div style="color:#ff3333;font-size:1.1rem;font-weight:700;margin-bottom:8px;">🚨 PRIORITY CORRIDOR ACTIVE</div>
+<div style="margin-bottom:6px;">Vehicle: <strong>${d.vehicleType}</strong> | Priority: <strong style="color:#ff3333">${d.priority}</strong></div>
+<div style="margin-bottom:6px;">Route: <strong>${d.origin}</strong> → <strong>${d.destination}</strong></div>
+<div style="margin-bottom:6px;">ETA: <strong>${d.estimatedMinutes} min</strong></div>
+<div style="margin-bottom:6px;">Route: ${d.route?.name} (${d.route?.distanceKm} km)</div>
+<div style="margin-bottom:6px;font-size:.82rem;color:#7a9cc0;">via ${d.route?.via?.join(' → ')}</div>
+<div style="margin-top:10px;color:#7a9cc0;font-size:.82rem;">Cleared Signals:</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+  ${(d.clearedSignals||[]).map(s=>`<span style="background:#ff333322;border:1px solid #ff333355;border-radius:4px;padding:2px 8px;font-size:.78rem;color:#ff8888;">${s}</span>`).join('')}
+</div>
+<div style="margin-top:12px;background:#ff330011;border:1px solid #ff333333;border-radius:6px;padding:8px 12px;font-size:.85rem;color:#ff9999;">
+  📢 ${d.broadcastMessage}
+</div>`;
+  }catch(e){el.textContent='Error: '+e.message;}
+}
+
+// ── Alerts ─────────────────────────────────────────────────────────────────
+async function doAlerts(){
+  const city=document.getElementById('al-city')?.value||'SmartCity';
+  const sev=document.getElementById('al-severity')?.value||'';
+  const el=document.getElementById('alerts-result');
+  if(!el) return;
+  el.innerHTML='Loading alerts…';
+  try{
+    const body={city};
+    if(sev) body.severity=sev;
+    const d=await apiFetch('/alerts','POST',body);
+    if(!d.alerts||d.alerts.length===0){el.innerHTML='<div style="color:#7a9cc0;padding:20px;text-align:center;">No active alerts.</div>';return;}
+    el.innerHTML=`<div style="font-size:.82rem;color:#7a9cc0;margin-bottom:10px;">
+      ${d.totalAlerts} alert(s) for <strong>${d.city}</strong></div>`+
+      d.alerts.map(a=>`
+<div class="alert-item ${a.severity}">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+    <strong style="color:${levelColor(a.severity)}">${a.type.replace('_',' ')}</strong>
+    <span class="tag ${a.severity}">${a.severity}</span>
+  </div>
+  <div style="font-size:.85rem;">${a.message}</div>
+  <div style="font-size:.75rem;color:#5a7a9a;margin-top:4px;">📍 ${a.location} | 🕐 ${new Date(a.timestamp).toLocaleTimeString()}</div>
+</div>`).join('');
+  }catch(e){el.innerHTML='Error: '+e.message;}
+}
+
+// ── Chatbot ────────────────────────────────────────────────────────────────
+async function sendChat(){
+  const input=document.getElementById('chat-input');
+  const msg=input.value.trim();
+  if(!msg) return;
+  input.value='';
+  const box=document.getElementById('chat-box');
+  box.innerHTML+=`<div class="chat-msg user"><div class="bubble">${msg}</div></div>`;
+  box.scrollTop=box.scrollHeight;
+  try{
+    const d=await apiFetch('/chatbot','POST',{message:msg,sessionId:'web-session'});
+    box.innerHTML+=`<div class="chat-msg bot"><div class="bubble">🤖 ${d.botResponse}</div></div>`;
+  }catch(e){
+    box.innerHTML+=`<div class="chat-msg bot"><div class="bubble" style="color:#ff6666;">⚠️ Could not reach AI service.</div></div>`;
+  }
+  box.scrollTop=box.scrollHeight;
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+loadStats();
+</script>
+</body>
+</html>
